@@ -5,7 +5,8 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 import GlassHeader from '@/components/GlassHeader';
 import GlowingButton from '@/components/GlowingButton';
-import { Play, RotateCcw } from 'lucide-react';
+import GlassTerminal from '@/components/GlassTerminal';
+import { Play, RotateCcw, Terminal } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -25,6 +26,7 @@ export default function Executor() {
   const [isRunning, setIsRunning] = useState(false);
   const [pyodideReady, setPyodideReady] = useState(false);
   const [isLoadingPyodide, setIsLoadingPyodide] = useState(true);
+  const [codeToSendToConsole, setCodeToSendToConsole] = useState<string>('');
   const pyodideRef = useRef<any>(null);
 
   // Load Pyodide
@@ -131,10 +133,21 @@ sys.stderr = StringIO()
     toast.info('Code reset');
   };
 
+  const sendToConsole = async () => {
+    if (!pyodideReady || !pyodideRef.current) {
+      toast.error('Python environment not ready yet');
+      return;
+    }
+    
+    // Send code to terminal by updating state
+    setCodeToSendToConsole(code);
+    toast.success('Code sent to console');
+  };
+
   return (
     <>
       <Head>
-        <title>Python Executor - Code Forsyth</title>
+        <title>Python Executor - CodeForsyth</title>
       </Head>
 
       <div className="min-h-screen bg-black text-white overflow-hidden">
@@ -159,8 +172,8 @@ sys.stderr = StringIO()
           </div>
         )}
 
-        <main className="relative z-10 pt-24 pb-8 px-4 h-screen">
-          <div className="h-full max-w-7xl mx-auto">
+        <main className="relative z-10 pt-24 pb-8 px-4">
+          <div className="max-w-7xl mx-auto">
             {/* Action Bar */}
             <motion.div
               initial={{ opacity: 0, y: -20 }}
@@ -186,6 +199,18 @@ sys.stderr = StringIO()
                 >
                   {isRunning ? 'Running...' : 'Run Code'}
                 </GlowingButton>
+                <button
+                  onClick={sendToConsole}
+                  disabled={!pyodideReady}
+                  className={cn(
+                    "glass glass-hover px-4 py-2 rounded-full flex items-center gap-2",
+                    !pyodideReady && 'opacity-50 cursor-not-allowed'
+                  )}
+                  title="Send to Console"
+                >
+                  <Terminal size={18} />
+                  <span className="hidden sm:inline">Send to Console</span>
+                </button>
               </div>
             </motion.div>
 
@@ -194,7 +219,8 @@ sys.stderr = StringIO()
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-[calc(100%-120px)]"
+              className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4"
+              style={{ height: 'calc(50vh - 100px)' }}
             >
               {/* Editor Panel */}
               <div className="glass rounded-2xl overflow-hidden flex flex-col">
@@ -234,6 +260,16 @@ sys.stderr = StringIO()
                 </div>
               </div>
             </motion.div>
+
+            {/* Console Section */}
+            {pyodideReady && (
+              <GlassTerminal 
+                pyodide={pyodideRef.current} 
+                isReady={pyodideReady}
+                codeToExecute={codeToSendToConsole}
+                onCodeExecuted={() => setCodeToSendToConsole('')}
+              />
+            )}
           </div>
         </main>
       </div>
