@@ -5,7 +5,7 @@ export default function Document() {
     <Html lang="en">
       <Head>
         <meta name="description" content="CodeForsyth - The most beautiful in-browser Python coding platform" />
-        <link rel="icon" type="image/webp" href="/code/favicon.ico" />
+        <link rel="icon" type="image/x-icon" href="/code/favicon.ico" />
         <link rel="apple-touch-icon" href="/code/favicon.ico" />
         {/* Suppress AMD module loader errors from Pyodide */}
         <script

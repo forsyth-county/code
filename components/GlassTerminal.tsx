@@ -16,7 +16,6 @@ export default function GlassTerminal({ pyodide, isReady, codeToExecute, onCodeE
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [currentLine, setCurrentLine] = useState('');
-  const [commandBuffer, setCommandBuffer] = useState('');
   const cursorPos = useRef(0);
 
   useEffect(() => {
@@ -158,7 +157,6 @@ export default function GlassTerminal({ pyodide, isReady, codeToExecute, onCodeE
       }
       
       setCurrentLine('');
-      setCommandBuffer('');
       writePrompt(term);
     } else if (code === 127) {
       // Backspace
@@ -256,7 +254,6 @@ sys.stderr = _stderr
       
       // Display result if not None and no stdout
       if (result !== undefined && result !== null && !stdout) {
-        const resultStr = await pyodide.runPythonAsync(`repr(${JSON.stringify(result)})`);
         term.writeln('\x1b[33m' + String(result) + '\x1b[0m');
       }
     } catch (error: any) {
