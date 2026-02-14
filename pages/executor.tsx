@@ -154,7 +154,7 @@ sys.stderr = StringIO()
             <div className="glass rounded-2xl p-8 text-center">
               <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
               <h2 className="text-2xl font-bold text-gradient mb-2">Loading Python Environment...</h2>
-              <p className="text-gray-300">This may take a moment (~30MB download)</p>
+              <p className="text-gray-100">This may take a moment (~30MB download)</p>
             </div>
           </div>
         )}
@@ -228,7 +228,7 @@ sys.stderr = StringIO()
                   <span className="text-sm font-semibold text-red-400">Output</span>
                 </div>
                 <div className="flex-1 overflow-auto p-4">
-                  <pre className="font-mono text-sm text-green-300 whitespace-pre-wrap">
+                  <pre className="font-mono text-sm text-gray-100 whitespace-pre-wrap">
                     {output || 'Output will appear here...'}
                   </pre>
                 </div>

@@ -70,7 +70,7 @@ export default function Home() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.6 }}
-                className="text-lg md:text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed"
+                className="text-lg md:text-xl text-gray-100 max-w-3xl mx-auto leading-relaxed"
               >
                 Turn practice time into mastery. Instant Python executor with a beautiful interface — fast, safe, and actually fun.
               </motion.p>
@@ -87,7 +87,7 @@ export default function Home() {
                   icon={Code2}
                   variant="gradient"
                   size="lg"
-                  className="text-xl bg-gradient-to-r from-blue-500 via-white to-red-500"
+                  className="text-xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white font-bold"
                 >
                   Start Coding Now
                 </GlowingButton>
@@ -127,7 +127,7 @@ export default function Home() {
                 >
                   <div className="text-5xl mb-4">{feature.emoji}</div>
                   <h3 className="text-xl font-bold mb-3 text-gradient">{feature.title}</h3>
-                  <p className="text-gray-300">{feature.description}</p>
+                  <p className="text-gray-100">{feature.description}</p>
                 </motion.div>
               ))}
             </motion.div>
