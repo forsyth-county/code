@@ -253,7 +253,8 @@ sys.stderr = _stderr
       }
       
       // Display result if not None and no stdout
-      if (result !== undefined && result !== null && !stdout) {
+      // Pyodide converts Python None to undefined, and meaningful results to actual values
+      if (result !== undefined && !stdout && String(result) !== 'undefined') {
         term.writeln('\x1b[33m' + String(result) + '\x1b[0m');
       }
     } catch (error: any) {

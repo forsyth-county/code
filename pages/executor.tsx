@@ -134,7 +134,7 @@ sys.stderr = StringIO()
     toast.info('Code reset');
   };
 
-  const sendToConsole = async () => {
+  const sendToConsole = () => {
     if (!pyodideReady || !pyodideRef.current) {
       toast.error('Python environment not ready yet');
       return;
