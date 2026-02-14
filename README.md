@@ -1,8 +1,8 @@
-# Code Forsyth ✨
+# CodeForsyth ✨
 
 **A beautiful in-browser Python code executor for students**
 
-Code Forsyth is a streamlined, fully client-side Python code executor built for Forsyth County students to learn and practice coding. With a clean blue/white/red interface, dark grid background, and glassmorphic design, it makes coding simple and beautiful.
+CodeForsyth is a streamlined, fully client-side Python code executor built for Forsyth County students to learn and practice coding. With a clean blue/white/red interface, dark grid background, and glassmorphic design, it makes coding simple and beautiful.
 
 ![Code Forsyth](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js)
 ![Python](https://img.shields.io/badge/Python-3.11-blue?style=for-the-badge&logo=python)
@@ -13,6 +13,7 @@ Code Forsyth is a streamlined, fully client-side Python code executor built for 
 - **🚀 Instant Python Execution**: Run Python code directly in your browser using Pyodide (WebAssembly)
 - **✨ Beautiful Interface**: Dark theme with grid background, glassmorphism, and smooth animations
 - **🎨 Monaco Editor**: VS Code-like editing experience with syntax highlighting
+- **🖥️ Interactive Python Console**: Live REPL with xterm.js for line-by-line Python execution
 - **🛡️ Error Handling**: Clear error messages for both syntax and runtime errors
 - **📱 Fully Responsive**: Works beautifully on desktop, tablet, and mobile
 - **⚡ Zero Backend**: 100% client-side, perfect for GitHub Pages
@@ -25,6 +26,7 @@ Code Forsyth is a streamlined, fully client-side Python code executor built for 
 - **Animations**: [Framer Motion](https://www.framer.com/motion/)
 - **Python Runtime**: [Pyodide 0.25.0](https://pyodide.org/)
 - **Code Editor**: [Monaco Editor](https://microsoft.github.io/monaco-editor/)
+- **Terminal**: [xterm.js](https://xtermjs.org/) - Interactive terminal emulator
 - **Notifications**: [Sonner](https://sonner.emilkowal.ski/)
 - **Icons**: [Lucide React](https://lucide.dev/)
 
@@ -65,7 +67,8 @@ npm run build
 code/
 ├── components/          # React components
 │   ├── GlassHeader.tsx # Navigation header
-│   └── GlowingButton.tsx # Animated button
+│   ├── GlowingButton.tsx # Animated button
+│   └── GlassTerminal.tsx # Interactive Python console
 ├── lib/                # Utilities
 │   └── utils.ts        # Helper functions
 ├── pages/              # Next.js pages
@@ -74,6 +77,7 @@ code/
 │   ├── index.tsx       # Landing page
 │   └── executor.tsx    # Python executor
 ├── public/             # Static assets
+│   └── favicon.ico     # Site favicon
 ├── styles/             # Global styles
 │   └── globals.css     # Tailwind + custom CSS
 └── next.config.js      # Next.js config
@@ -96,12 +100,30 @@ code/
 
 ## 🎯 Usage
 
-### Running Python Code
+### Running Python Code in the Editor
 
 1. Navigate to the **Executor** page
 2. Write or paste Python code in the Monaco Editor
 3. Click **Run Code** to execute
 4. View output in the output panel
+
+### Using the Interactive Python Console
+
+The executor page features a live Python REPL (Read-Eval-Print Loop) console below the editor:
+
+1. Type Python commands directly in the console
+2. Press **Enter** to execute line-by-line
+3. Results appear immediately in the terminal
+4. Use **Up/Down arrows** to navigate command history
+5. Click **Send to Console** button to execute editor code in the console
+6. Click the **Trash icon** to clear the console
+
+The console provides:
+- Real-time Python execution
+- Command history (arrow keys)
+- Multi-line input support
+- Syntax-highlighted output
+- Shared Pyodide environment with the editor
 
 ### Error Handling
 
@@ -156,6 +178,7 @@ Built with ❤️ for Forsyth County students.
 **Technologies:**
 - [Pyodide](https://pyodide.org/) - Python in the browser
 - [Monaco Editor](https://microsoft.github.io/monaco-editor/) - Code editor
+- [xterm.js](https://xtermjs.org/) - Terminal emulator
 - [Next.js](https://nextjs.org/) - React framework
 - [Tailwind CSS](https://tailwindcss.com/) - Styling
 - [Framer Motion](https://www.framer.com/motion/) - Animations

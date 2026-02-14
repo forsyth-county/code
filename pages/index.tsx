@@ -13,7 +13,7 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>Code Forsyth - Level Up Your Coding</title>
+        <title>CodeForsyth - Level Up Your Coding</title>
         <meta name="description" content="The most beautiful in-browser Python coding platform" />
       </Head>
 
