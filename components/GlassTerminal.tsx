@@ -128,16 +128,30 @@ export default function GlassTerminal({ pyodide, isReady, codeToExecute, onCodeE
       return await waitForUserInput(prompt || '');
     });
     
-    // Override Python's built-in input function
+    // Set up Python environment with proper input support
     await pyodide.runPythonAsync(`
 import builtins
-import asyncio
+import sys
+from io import StringIO
 
-async def custom_input(prompt=''):
-    """Custom input function that works in the browser"""
+# Save original stdout/stderr once at initialization
+if not hasattr(sys, '_codeforsyth_original_stdout'):
+    sys._codeforsyth_original_stdout = sys.stdout
+    sys._codeforsyth_original_stderr = sys.stderr
+
+# Create a synchronous-looking input that works with top-level await
+def custom_input(prompt=''):
+    """Custom input function that works in the browser with top-level await"""
     from js import js_input
-    result = await js_input(str(prompt))
-    return result
+    import asyncio
+    # This works because Pyodide's runPythonAsync allows top-level await
+    loop = asyncio.get_event_loop()
+    if loop.is_running():
+        # We're in an async context, we can await
+        return loop.run_until_complete(js_input(str(prompt)))
+    else:
+        # Fallback for sync contexts
+        return asyncio.run(js_input(str(prompt)))
 
 # Replace the built-in input with our custom version
 builtins.input = custom_input
@@ -147,6 +161,13 @@ builtins.input = custom_input
   const waitForUserInput = (prompt: string): Promise<string> => {
     return new Promise((resolve) => {
       if (!xtermRef.current) {
+        resolve('');
+        return;
+      }
+      
+      // Guard against concurrent input requests
+      if (isWaitingForInputRef.current) {
+        console.warn('Already waiting for input, rejecting concurrent request');
         resolve('');
         return;
       }
@@ -196,8 +217,18 @@ builtins.input = custom_input
     // Check if the statement needs continuation
     const trimmed = code.trim();
     
+    // Empty line is complete
+    if (!trimmed) return false;
+    
+    // Check for line continuation character (backslash at end)
+    if (trimmed.endsWith('\\')) return true;
+    
     // Check for colon at end (if/for/while/def/class/try/except/with)
     if (trimmed.endsWith(':')) return true;
+    
+    // Keywords that require continuation
+    const continationKeywords = ['elif', 'else', 'except', 'finally'];
+    if (continationKeywords.includes(trimmed)) return true;
     
     // Check for unclosed parentheses, brackets, or braces
     let parenCount = 0;
@@ -205,12 +236,26 @@ builtins.input = custom_input
     let braceCount = 0;
     let inString = false;
     let stringChar = '';
+    let inTripleQuote = false;
     
     for (let i = 0; i < code.length; i++) {
       const char = code[i];
       const prevChar = i > 0 ? code[i - 1] : '';
+      const nextChar = i < code.length - 1 ? code[i + 1] : '';
+      const next2Char = i < code.length - 2 ? code[i + 2] : '';
       
-      // Handle strings
+      // Handle triple-quoted strings
+      if (!inString && (char === '"' || char === "'") && nextChar === char && next2Char === char) {
+        inTripleQuote = !inTripleQuote;
+        stringChar = char;
+        i += 2; // Skip next two chars
+        continue;
+      }
+      
+      // Skip if we're in a triple-quoted string
+      if (inTripleQuote) continue;
+      
+      // Handle regular strings
       if ((char === '"' || char === "'") && prevChar !== '\\') {
         if (!inString) {
           inString = true;
@@ -230,7 +275,7 @@ builtins.input = custom_input
       }
     }
     
-    return parenCount > 0 || bracketCount > 0 || braceCount > 0;
+    return parenCount > 0 || bracketCount > 0 || braceCount > 0 || inString || inTripleQuote;
   };
 
   const handleTerminalInput = async (term: any, data: string) => {
@@ -385,14 +430,12 @@ builtins.input = custom_input
 
   const executeCommand = async (term: any, command: string) => {
     try {
-      // Set up stdout/stderr capture
+      // Set up stdout/stderr capture using the saved originals
       await pyodide.runPythonAsync(`
 import sys
 from io import StringIO
 _stdout = StringIO()
 _stderr = StringIO()
-_original_stdout = sys.stdout
-_original_stderr = sys.stderr
 sys.stdout = _stdout
 sys.stderr = _stderr
 `);
@@ -403,18 +446,20 @@ sys.stderr = _stderr
         // Use runPythonAsync which handles await properly in top-level code
         result = await pyodide.runPythonAsync(command);
       } catch (error: any) {
-        // Execution error
+        // Execution error - get and display stderr
         const stderr = await pyodide.runPythonAsync('_stderr.getvalue()');
+        
+        // Restore stdout/stderr before displaying error
+        await pyodide.runPythonAsync(`
+sys.stdout = sys._codeforsyth_original_stdout
+sys.stderr = sys._codeforsyth_original_stderr
+`);
+        
         if (stderr) {
           term.writeln('\x1b[31m' + stderr + '\x1b[0m');
         } else {
           term.writeln('\x1b[31mError: ' + error.message + '\x1b[0m');
         }
-        // Restore stdout/stderr
-        await pyodide.runPythonAsync(`
-sys.stdout = _original_stdout
-sys.stderr = _original_stderr
-`);
         return;
       }
 
@@ -424,8 +469,8 @@ sys.stderr = _original_stderr
 
       // Restore stdout/stderr
       await pyodide.runPythonAsync(`
-sys.stdout = _original_stdout
-sys.stderr = _original_stderr
+sys.stdout = sys._codeforsyth_original_stdout
+sys.stderr = sys._codeforsyth_original_stderr
 `);
 
       // Display output
@@ -446,8 +491,8 @@ sys.stderr = _original_stderr
       // Try to restore stdout/stderr even on error
       try {
         await pyodide.runPythonAsync(`
-sys.stdout = _original_stdout
-sys.stderr = _original_stderr
+sys.stdout = sys._codeforsyth_original_stdout
+sys.stderr = sys._codeforsyth_original_stderr
 `);
       } catch (e) {
         // Ignore restoration errors
