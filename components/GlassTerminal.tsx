@@ -75,7 +75,7 @@ export default function GlassTerminal({ pyodide, isReady, codeToExecute, onCodeE
         terminal.writeln('\x1b[36m╔════════════════════════════════════════════════════════╗\x1b[0m');
         terminal.writeln('\x1b[36m║\x1b[0m  \x1b[1;35mWelcome to CodeForsyth REPL\x1b[0m                           \x1b[36m║\x1b[0m');
         terminal.writeln('\x1b[36m║\x1b[0m  \x1b[33mPython 3.11 | Pyodide Environment\x1b[0m                    \x1b[36m║\x1b[0m');
-        terminal.writeln('\x1b[36m║\x1b[0m  \x1b[32mType code and press Enter to execute\x1b[0m                  \x1b[36m║\x1b[0m');
+        terminal.writeln('\x1b[36m║\x1b[0m  \x1b[32mSupports interactive input() and multi-line code\x1b[0m      \x1b[36m║\x1b[0m');
         terminal.writeln('\x1b[36m╚════════════════════════════════════════════════════════╝\x1b[0m');
         terminal.writeln('');
         
@@ -391,6 +391,8 @@ import sys
 from io import StringIO
 _stdout = StringIO()
 _stderr = StringIO()
+_original_stdout = sys.stdout
+_original_stderr = sys.stderr
 sys.stdout = _stdout
 sys.stderr = _stderr
 `);
@@ -398,6 +400,7 @@ sys.stderr = _stderr
       // Execute the command
       let result;
       try {
+        // Use runPythonAsync which handles await properly in top-level code
         result = await pyodide.runPythonAsync(command);
       } catch (error: any) {
         // Execution error
@@ -407,12 +410,23 @@ sys.stderr = _stderr
         } else {
           term.writeln('\x1b[31mError: ' + error.message + '\x1b[0m');
         }
+        // Restore stdout/stderr
+        await pyodide.runPythonAsync(`
+sys.stdout = _original_stdout
+sys.stderr = _original_stderr
+`);
         return;
       }
 
       // Get captured output
       const stdout = await pyodide.runPythonAsync('_stdout.getvalue()');
       const stderr = await pyodide.runPythonAsync('_stderr.getvalue()');
+
+      // Restore stdout/stderr
+      await pyodide.runPythonAsync(`
+sys.stdout = _original_stdout
+sys.stderr = _original_stderr
+`);
 
       // Display output
       if (stdout) {
@@ -429,6 +443,15 @@ sys.stderr = _stderr
       }
     } catch (error: any) {
       term.writeln('\x1b[31mError: ' + error.message + '\x1b[0m');
+      // Try to restore stdout/stderr even on error
+      try {
+        await pyodide.runPythonAsync(`
+sys.stdout = _original_stdout
+sys.stderr = _original_stderr
+`);
+      } catch (e) {
+        // Ignore restoration errors
+      }
     }
   };
 
