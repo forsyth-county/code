@@ -27,7 +27,7 @@ const GlassHeader = () => {
             <Code2 className="w-6 h-6 text-white" />
           </div>
           <span className="text-xl font-bold text-gradient hidden md:block">
-            Code Forsyth
+            CodeForsyth
           </span>
         </Link>
 

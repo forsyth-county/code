@@ -7,6 +7,17 @@ export default function Document() {
         <meta name="description" content="CodeForsyth - The most beautiful in-browser Python coding platform" />
         <link rel="icon" type="image/webp" href="/code/favicon.ico" />
         <link rel="apple-touch-icon" href="/code/favicon.ico" />
+        {/* Suppress AMD module loader errors from Pyodide */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if (typeof window !== 'undefined') {
+                window.define = undefined;
+                window.require = undefined;
+              }
+            `,
+          }}
+        />
       </Head>
       <body>
         <Main />

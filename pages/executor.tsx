@@ -46,6 +46,7 @@ export default function Executor() {
           try {
             const pyodide = await window.loadPyodide({
               indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.25.0/full/',
+              fullStdLib: false, // Don't load full standard library upfront
             });
             pyodideRef.current = pyodide;
             setPyodideReady(true);
