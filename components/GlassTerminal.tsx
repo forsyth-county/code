@@ -17,6 +17,10 @@ export default function GlassTerminal({ pyodide, isReady, codeToExecute, onCodeE
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [currentLine, setCurrentLine] = useState('');
   const cursorPos = useRef(0);
+  const inputResolverRef = useRef<((value: string) => void) | null>(null);
+  const isWaitingForInputRef = useRef(false);
+  const multilineBufferRef = useRef<string[]>([]);
+  const isMultilineRef = useRef(false);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !terminalRef.current) return;
@@ -71,7 +75,7 @@ export default function GlassTerminal({ pyodide, isReady, codeToExecute, onCodeE
         terminal.writeln('\x1b[36m╔════════════════════════════════════════════════════════╗\x1b[0m');
         terminal.writeln('\x1b[36m║\x1b[0m  \x1b[1;35mWelcome to CodeForsyth REPL\x1b[0m                           \x1b[36m║\x1b[0m');
         terminal.writeln('\x1b[36m║\x1b[0m  \x1b[33mPython 3.11 | Pyodide Environment\x1b[0m                    \x1b[36m║\x1b[0m');
-        terminal.writeln('\x1b[36m║\x1b[0m  \x1b[32mType code and press Enter to execute\x1b[0m                  \x1b[36m║\x1b[0m');
+        terminal.writeln('\x1b[36m║\x1b[0m  \x1b[32mSupports interactive input() and multi-line code\x1b[0m      \x1b[36m║\x1b[0m');
         terminal.writeln('\x1b[36m╚════════════════════════════════════════════════════════╝\x1b[0m');
         terminal.writeln('');
         
@@ -105,13 +109,81 @@ export default function GlassTerminal({ pyodide, isReady, codeToExecute, onCodeE
     initTerminal();
   }, []);
 
-  // Update prompt when Pyodide becomes ready
+  // Update prompt when Pyodide becomes ready and set up custom input function
   useEffect(() => {
-    if (xtermRef.current && isReady) {
+    if (xtermRef.current && isReady && pyodide) {
       xtermRef.current.writeln('\x1b[32mPython environment ready!\x1b[0m');
       xtermRef.current.writeln('');
+      
+      // Set up custom input function in Python
+      setupCustomInput();
     }
-  }, [isReady]);
+  }, [isReady, pyodide]);
+
+  const setupCustomInput = async () => {
+    if (!pyodide) return;
+    
+    // Create a JavaScript function that can be called from Python
+    pyodide.globals.set('js_input', async (prompt: string) => {
+      return await waitForUserInput(prompt || '');
+    });
+    
+    // Set up Python environment with proper input support
+    await pyodide.runPythonAsync(`
+import builtins
+import sys
+from io import StringIO
+
+# Save original stdout/stderr once at initialization
+if not hasattr(sys, '_codeforsyth_original_stdout'):
+    sys._codeforsyth_original_stdout = sys.stdout
+    sys._codeforsyth_original_stderr = sys.stderr
+
+# Create a synchronous-looking input that works with top-level await
+def custom_input(prompt=''):
+    """Custom input function that works in the browser with top-level await"""
+    from js import js_input
+    import asyncio
+    # This works because Pyodide's runPythonAsync allows top-level await
+    loop = asyncio.get_event_loop()
+    if loop.is_running():
+        # We're in an async context, we can await
+        return loop.run_until_complete(js_input(str(prompt)))
+    else:
+        # Fallback for sync contexts
+        return asyncio.run(js_input(str(prompt)))
+
+# Replace the built-in input with our custom version
+builtins.input = custom_input
+`);
+  };
+
+  const waitForUserInput = (prompt: string): Promise<string> => {
+    return new Promise((resolve) => {
+      if (!xtermRef.current) {
+        resolve('');
+        return;
+      }
+      
+      // Guard against concurrent input requests
+      if (isWaitingForInputRef.current) {
+        console.warn('Already waiting for input, rejecting concurrent request. Prompt:', prompt);
+        resolve('');
+        return;
+      }
+      
+      const term = xtermRef.current;
+      
+      // Display the prompt
+      if (prompt) {
+        term.write(prompt);
+      }
+      
+      // Set up input waiting state
+      isWaitingForInputRef.current = true;
+      inputResolverRef.current = resolve;
+    });
+  };
 
   // Execute code when codeToExecute changes
   useEffect(() => {
@@ -132,32 +204,175 @@ export default function GlassTerminal({ pyodide, isReady, codeToExecute, onCodeE
     }
   }, [codeToExecute, isReady, pyodide, onCodeExecuted]);
 
-  const writePrompt = (term: any) => {
-    term.write('\x1b[36m>>> \x1b[0m');
+  const writePrompt = (term: any, isContinuation = false) => {
+    if (isContinuation) {
+      term.write('\x1b[36m... \x1b[0m');
+    } else {
+      term.write('\x1b[36m>>> \x1b[0m');
+    }
     cursorPos.current = 0;
+  };
+
+  const isIncompleteStatement = (code: string): boolean => {
+    // Check if the statement needs continuation
+    const trimmed = code.trim();
+    
+    // Empty line is complete
+    if (!trimmed) return false;
+    
+    // Check for line continuation character (backslash at end)
+    if (trimmed.endsWith('\\')) return true;
+    
+    // Check for colon at end (if/for/while/def/class/try/except/with)
+    if (trimmed.endsWith(':')) return true;
+    
+    // Keywords that require continuation
+    const continuationKeywords = ['elif', 'else', 'except', 'finally'];
+    if (continuationKeywords.includes(trimmed)) return true;
+    
+    // Check for unclosed parentheses, brackets, or braces
+    let parenCount = 0;
+    let bracketCount = 0;
+    let braceCount = 0;
+    let inString = false;
+    let stringChar = '';
+    let inTripleQuote = false;
+    
+    for (let i = 0; i < code.length; i++) {
+      const char = code[i];
+      const prevChar = i > 0 ? code[i - 1] : '';
+      const nextChar = i < code.length - 1 ? code[i + 1] : '';
+      const next2Char = i < code.length - 2 ? code[i + 2] : '';
+      
+      // Handle triple-quoted strings
+      if (!inString && (char === '"' || char === "'") && nextChar === char && next2Char === char) {
+        inTripleQuote = !inTripleQuote;
+        stringChar = char;
+        i += 2; // Skip next two chars
+        continue;
+      }
+      
+      // Skip if we're in a triple-quoted string
+      if (inTripleQuote) continue;
+      
+      // Handle regular strings
+      if ((char === '"' || char === "'") && prevChar !== '\\') {
+        if (!inString) {
+          inString = true;
+          stringChar = char;
+        } else if (char === stringChar) {
+          inString = false;
+        }
+      }
+      
+      if (!inString) {
+        if (char === '(') parenCount++;
+        else if (char === ')') parenCount--;
+        else if (char === '[') bracketCount++;
+        else if (char === ']') bracketCount--;
+        else if (char === '{') braceCount++;
+        else if (char === '}') braceCount--;
+      }
+    }
+    
+    return parenCount > 0 || bracketCount > 0 || braceCount > 0 || inString || inTripleQuote;
   };
 
   const handleTerminalInput = async (term: any, data: string) => {
     const code = data.charCodeAt(0);
 
-    // Handle special keys
+    // If waiting for input(), handle it differently
+    if (isWaitingForInputRef.current) {
+      if (code === 13) {
+        // Enter - submit the input
+        term.writeln('');
+        const inputValue = currentLine;
+        setCurrentLine('');
+        cursorPos.current = 0;
+        
+        // Resolve the input promise
+        if (inputResolverRef.current) {
+          inputResolverRef.current(inputValue);
+          inputResolverRef.current = null;
+        }
+        isWaitingForInputRef.current = false;
+      } else if (code === 127) {
+        // Backspace
+        if (cursorPos.current > 0) {
+          const newLine = currentLine.slice(0, -1);
+          setCurrentLine(newLine);
+          cursorPos.current--;
+          term.write('\b \b');
+        }
+      } else if (code >= 32) {
+        // Printable characters
+        const newLine = currentLine + data;
+        setCurrentLine(newLine);
+        cursorPos.current++;
+        term.write(data);
+      }
+      return;
+    }
+
+    // Normal REPL input handling
     if (code === 13) {
       // Enter
       term.writeln('');
-      const command = currentLine.trim();
+      const line = currentLine;
       
-      if (command) {
-        if (isReady && pyodide) {
-          await executeCommand(term, command);
-          setHistory(prev => [...prev, command]);
-          setHistoryIndex(-1);
+      // Add to multiline buffer if in multiline mode
+      if (isMultilineRef.current) {
+        multilineBufferRef.current.push(line);
+        
+        // Check if this is an empty line (end of multiline)
+        if (line.trim() === '') {
+          const fullCommand = multilineBufferRef.current.slice(0, -1).join('\n');
+          multilineBufferRef.current = [];
+          isMultilineRef.current = false;
+          
+          if (fullCommand.trim()) {
+            if (isReady && pyodide) {
+              await executeCommand(term, fullCommand);
+              setHistory(prev => [...prev, fullCommand]);
+              setHistoryIndex(-1);
+            } else {
+              term.writeln('\x1b[31mPython environment not ready yet\x1b[0m');
+            }
+          }
+          
+          setCurrentLine('');
+          writePrompt(term, false);
         } else {
-          term.writeln('\x1b[31mPython environment not ready yet\x1b[0m');
+          // Continue multiline
+          setCurrentLine('');
+          writePrompt(term, true);
+        }
+      } else {
+        // Single line or start of multiline
+        if (line.trim() === '') {
+          // Empty line
+          setCurrentLine('');
+          writePrompt(term, false);
+        } else if (isIncompleteStatement(line)) {
+          // Start multiline mode
+          multilineBufferRef.current = [line];
+          isMultilineRef.current = true;
+          setCurrentLine('');
+          writePrompt(term, true);
+        } else {
+          // Complete statement, execute it
+          if (isReady && pyodide) {
+            await executeCommand(term, line);
+            setHistory(prev => [...prev, line]);
+            setHistoryIndex(-1);
+          } else {
+            term.writeln('\x1b[31mPython environment not ready yet\x1b[0m');
+          }
+          
+          setCurrentLine('');
+          writePrompt(term, false);
         }
       }
-      
-      setCurrentLine('');
-      writePrompt(term);
     } else if (code === 127) {
       // Backspace
       if (cursorPos.current > 0) {
@@ -215,7 +430,7 @@ export default function GlassTerminal({ pyodide, isReady, codeToExecute, onCodeE
 
   const executeCommand = async (term: any, command: string) => {
     try {
-      // Set up stdout/stderr capture
+      // Set up stdout/stderr capture using the saved originals
       await pyodide.runPythonAsync(`
 import sys
 from io import StringIO
@@ -228,10 +443,18 @@ sys.stderr = _stderr
       // Execute the command
       let result;
       try {
+        // Use runPythonAsync which handles await properly in top-level code
         result = await pyodide.runPythonAsync(command);
       } catch (error: any) {
-        // Execution error
+        // Execution error - get and display stderr
         const stderr = await pyodide.runPythonAsync('_stderr.getvalue()');
+        
+        // Restore stdout/stderr before displaying error
+        await pyodide.runPythonAsync(`
+sys.stdout = sys._codeforsyth_original_stdout
+sys.stderr = sys._codeforsyth_original_stderr
+`);
+        
         if (stderr) {
           term.writeln('\x1b[31m' + stderr + '\x1b[0m');
         } else {
@@ -243,6 +466,12 @@ sys.stderr = _stderr
       // Get captured output
       const stdout = await pyodide.runPythonAsync('_stdout.getvalue()');
       const stderr = await pyodide.runPythonAsync('_stderr.getvalue()');
+
+      // Restore stdout/stderr
+      await pyodide.runPythonAsync(`
+sys.stdout = sys._codeforsyth_original_stdout
+sys.stderr = sys._codeforsyth_original_stderr
+`);
 
       // Display output
       if (stdout) {
@@ -259,6 +488,15 @@ sys.stderr = _stderr
       }
     } catch (error: any) {
       term.writeln('\x1b[31mError: ' + error.message + '\x1b[0m');
+      // Try to restore stdout/stderr even on error
+      try {
+        await pyodide.runPythonAsync(`
+sys.stdout = sys._codeforsyth_original_stdout
+sys.stderr = sys._codeforsyth_original_stderr
+`);
+      } catch (e) {
+        // Ignore restoration errors
+      }
     }
   };
 

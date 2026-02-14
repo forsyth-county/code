@@ -13,7 +13,12 @@ CodeForsyth is a streamlined, fully client-side Python code executor built for F
 - **🚀 Instant Python Execution**: Run Python code directly in your browser using Pyodide (WebAssembly)
 - **✨ Beautiful Interface**: Dark theme with grid background, glassmorphism, and smooth animations
 - **🎨 Monaco Editor**: VS Code-like editing experience with syntax highlighting
-- **🖥️ Interactive Python Console**: Live REPL with xterm.js for line-by-line Python execution
+- **🖥️ Interactive Python Console**: Live REPL with xterm.js supporting:
+  - Interactive `input()` function for user input
+  - Multi-line code blocks (functions, loops, classes)
+  - Command history with arrow keys
+  - Real Python console behavior with `>>>` and `...` prompts
+- **🔍 Type Checking**: Pyright integration for static type analysis
 - **🛡️ Error Handling**: Clear error messages for both syntax and runtime errors
 - **📱 Fully Responsive**: Works beautifully on desktop, tablet, and mobile
 - **⚡ Zero Backend**: 100% client-side, perfect for GitHub Pages
@@ -27,6 +32,7 @@ CodeForsyth is a streamlined, fully client-side Python code executor built for F
 - **Python Runtime**: [Pyodide 0.25.0](https://pyodide.org/)
 - **Code Editor**: [Monaco Editor](https://microsoft.github.io/monaco-editor/)
 - **Terminal**: [xterm.js](https://xtermjs.org/) - Interactive terminal emulator
+- **Type Checking**: [Pyright](https://github.com/microsoft/pyright) - Python static type checker
 - **Notifications**: [Sonner](https://sonner.emilkowal.ski/)
 - **Icons**: [Lucide React](https://lucide.dev/)
 
@@ -59,6 +65,16 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 npm run build
 
 # The static files will be in the 'out' directory
+```
+
+### Development Tools
+
+```bash
+# Type check Python code (optional)
+npx pyright
+
+# Lint code
+npm run lint
 ```
 
 ## 📁 Project Structure
@@ -119,11 +135,13 @@ The executor page features a live Python REPL (Read-Eval-Print Loop) console bel
 6. Click the **Trash icon** to clear the console
 
 The console provides:
-- Real-time Python execution
-- Command history (arrow keys)
-- Multi-line input support
-- Syntax-highlighted output
-- Shared Pyodide environment with the editor
+- **Interactive Input**: Full support for Python's `input()` function
+- **Multi-line Support**: Write functions, loops, and classes with proper indentation
+- **Real-time Execution**: See results immediately
+- **Command History**: Use arrow keys to navigate previous commands
+- **Continuation Prompts**: Proper `>>>` and `...` prompts like a real Python console
+- **Syntax Highlighting**: Color-coded output for better readability
+- **Shared Environment**: Same Pyodide instance as the editor
 
 ### Error Handling
 
@@ -133,19 +151,45 @@ The executor properly handles:
 - **Standard Error**: Displays warnings and error output
 - **Clear Messages**: User-friendly error formatting
 
-### Python Code Notes
+### Python Code Features
 
-**Important**: The browser-based Pyodide environment does not support `input()` for interactive user input. 
+#### Interactive Input Support
 
-Instead of:
+The console **now supports** Python's `input()` function for interactive user input!
+
 ```python
+# This works in the console!
 name = input("Enter your name: ")
+print(f"Hello, {name}!")
+
+age = input("Enter your age: ")
+print(f"You are {age} years old")
 ```
 
-Use pre-defined variables:
+#### Multi-line Code Blocks
+
+Write complex code with automatic multi-line detection:
+
 ```python
-name = "Student"
+# Define a function (press Enter twice to execute)
+def greet(name):
+    return f"Hello, {name}!"
+
+# Use loops
+for i in range(3):
+    print(f"Count: {i}")
+
+# Create classes
+class Student:
+    def __init__(self, name):
+        self.name = name
 ```
+
+The console automatically detects incomplete statements (ending with `:` or unclosed brackets) and shows the continuation prompt `...`
+
+#### Editor Limitations
+
+**Note**: The `input()` function works in the **interactive console** but not in the **code editor** panel due to the synchronous nature of the editor execution. For editor code that needs user input, use the **"Send to Console"** button to run it in the interactive console.
 
 ## 🌐 Deployment
 
