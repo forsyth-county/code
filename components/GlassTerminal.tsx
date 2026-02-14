@@ -167,7 +167,7 @@ builtins.input = custom_input
       
       // Guard against concurrent input requests
       if (isWaitingForInputRef.current) {
-        console.warn('Already waiting for input, rejecting concurrent request');
+        console.warn('Already waiting for input, rejecting concurrent request. Prompt:', prompt);
         resolve('');
         return;
       }
@@ -227,8 +227,8 @@ builtins.input = custom_input
     if (trimmed.endsWith(':')) return true;
     
     // Keywords that require continuation
-    const continationKeywords = ['elif', 'else', 'except', 'finally'];
-    if (continationKeywords.includes(trimmed)) return true;
+    const continuationKeywords = ['elif', 'else', 'except', 'finally'];
+    if (continuationKeywords.includes(trimmed)) return true;
     
     // Check for unclosed parentheses, brackets, or braces
     let parenCount = 0;
