@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
-import { Menu, X, Code2, Sparkles } from 'lucide-react';
+import { Menu, X, Code2 } from 'lucide-react';
 
 const GlassHeader = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -11,14 +11,7 @@ const GlassHeader = () => {
   const navItems = [
     { name: 'Home', path: '/' },
     { name: 'Executor', path: '/executor' },
-    { name: 'Challenges', path: '/challenges' },
-    { name: 'Examples', path: '/examples' },
-    { name: 'About', path: '/about' },
   ];
-
-  const handleBoredClick = () => {
-    router.push('/executor?random=true');
-  };
 
   return (
     <motion.header
@@ -30,7 +23,7 @@ const GlassHeader = () => {
       <div className="flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 bg-gradient-to-br from-cyan-400 to-purple-600 rounded-lg flex items-center justify-center transform group-hover:scale-110 transition-transform">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-red-600 rounded-lg flex items-center justify-center transform group-hover:scale-110 transition-transform">
             <Code2 className="w-6 h-6 text-white" />
           </div>
           <span className="text-xl font-bold text-gradient hidden md:block">
@@ -55,26 +48,13 @@ const GlassHeader = () => {
           ))}
         </nav>
 
-        {/* Bored Button */}
-        <div className="flex items-center gap-4">
-          <button
-            onClick={handleBoredClick}
-            className="hidden md:block px-6 py-2 rounded-full bg-gradient-to-r from-cyan-500 via-purple-500 to-red-500 hover:shadow-neon-purple transition-all transform hover:scale-105"
-          >
-            <span className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4" />
-              Bored?
-            </span>
-          </button>
-
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-full glass-hover"
-          >
-            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
-        </div>
+        {/* Mobile Menu Button */}
+        <button
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="md:hidden p-2 rounded-full glass-hover"
+        >
+          {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
       </div>
 
       {/* Mobile Menu */}
@@ -98,18 +78,6 @@ const GlassHeader = () => {
               {item.name}
             </Link>
           ))}
-          <button
-            onClick={() => {
-              handleBoredClick();
-              setMobileMenuOpen(false);
-            }}
-            className="px-6 py-2 rounded-full bg-gradient-to-r from-cyan-500 via-purple-500 to-red-500 hover:shadow-neon-purple"
-          >
-            <span className="flex items-center gap-2 justify-center">
-              <Sparkles className="w-4 h-4" />
-              Bored?
-            </span>
-          </button>
         </motion.nav>
       )}
     </motion.header>

@@ -5,10 +5,9 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 import GlassHeader from '@/components/GlassHeader';
 import GlowingButton from '@/components/GlowingButton';
-import { Play, Download, Share2, RotateCcw } from 'lucide-react';
+import { Play, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { getRandomChallenge, getChallengeById } from '@/data/challenges';
 
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
 
@@ -70,24 +69,6 @@ export default function Executor() {
     loadPyodideScript();
   }, []);
 
-  // Handle random challenge from URL
-  useEffect(() => {
-    if (router.query.random === 'true') {
-      const challenge = getRandomChallenge();
-      setCode(challenge.code);
-      toast.success(`Random challenge: ${challenge.title}`, {
-        description: challenge.description,
-      });
-    } else if (router.query.challenge) {
-      const challengeId = parseInt(router.query.challenge as string);
-      const challenge = getChallengeById(challengeId);
-      if (challenge) {
-        setCode(challenge.code);
-        toast.info(`Challenge: ${challenge.title}`);
-      }
-    }
-  }, [router.query]);
-
   const runCode = async () => {
     if (!pyodideReady || !pyodideRef.current) {
       toast.error('Python environment not ready yet');
@@ -98,34 +79,50 @@ export default function Executor() {
     setOutput('Running...\n');
 
     try {
-      // Redirect stdout
+      // Redirect stdout and stderr
       await pyodideRef.current.runPythonAsync(`
 import sys
 from io import StringIO
 sys.stdout = StringIO()
+sys.stderr = StringIO()
 `);
 
       // Run user code
-      await pyodideRef.current.runPythonAsync(code);
-
-      // Get output
-      const stdout = await pyodideRef.current.runPythonAsync('sys.stdout.getvalue()');
-      setOutput(stdout || '(No output)');
-      toast.success('Code executed successfully!');
+      try {
+        await pyodideRef.current.runPythonAsync(code);
+        
+        // Get output from stdout
+        const stdout = await pyodideRef.current.runPythonAsync('sys.stdout.getvalue()');
+        const stderr = await pyodideRef.current.runPythonAsync('sys.stderr.getvalue()');
+        
+        let finalOutput = '';
+        if (stdout) {
+          finalOutput += stdout;
+        }
+        if (stderr) {
+          finalOutput += (finalOutput ? '\n' : '') + 'Errors:\n' + stderr;
+        }
+        
+        setOutput(finalOutput || '(No output)');
+        
+        if (stderr) {
+          toast.error('Code executed with errors');
+        } else {
+          toast.success('Code executed successfully!');
+        }
+      } catch (execError: any) {
+        // Handle syntax errors and runtime errors
+        const errorMessage = execError.message || execError.toString();
+        setOutput(`Error:\n${errorMessage}`);
+        toast.error('Execution error - check output for details');
+      }
     } catch (error: any) {
-      const errorMessage = error.message || 'Unknown error';
-      setOutput(`Error:\n${errorMessage}`);
-      toast.error('Execution error');
+      const errorMessage = error.message || 'Unknown error occurred';
+      setOutput(`System Error:\n${errorMessage}`);
+      toast.error('System error occurred');
     } finally {
       setIsRunning(false);
     }
-  };
-
-  const shareCode = () => {
-    const encoded = btoa(code);
-    const url = `${window.location.origin}${window.location.pathname}?code=${encoded}`;
-    navigator.clipboard.writeText(url);
-    toast.success('Code link copied to clipboard!');
   };
 
   const resetCode = () => {
@@ -155,9 +152,9 @@ sys.stdout = StringIO()
         {isLoadingPyodide && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl">
             <div className="glass rounded-2xl p-8 text-center">
-              <div className="w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
               <h2 className="text-2xl font-bold text-gradient mb-2">Loading Python Environment...</h2>
-              <p className="text-purple-200/70">This may take a moment (~30MB download)</p>
+              <p className="text-gray-300">This may take a moment (~30MB download)</p>
             </div>
           </div>
         )}
@@ -179,14 +176,6 @@ sys.stdout = StringIO()
                 >
                   <RotateCcw size={18} />
                   <span className="hidden sm:inline">Reset</span>
-                </button>
-                <button
-                  onClick={shareCode}
-                  className="glass glass-hover px-4 py-2 rounded-full flex items-center gap-2"
-                  title="Share Code"
-                >
-                  <Share2 size={18} />
-                  <span className="hidden sm:inline">Share</span>
                 </button>
                 <GlowingButton
                   onClick={runCode}
@@ -210,8 +199,8 @@ sys.stdout = StringIO()
               {/* Editor Panel */}
               <div className="glass rounded-2xl overflow-hidden flex flex-col">
                 <div className="px-4 py-2 border-b border-white/10 flex items-center justify-between">
-                  <span className="text-sm font-semibold text-cyan-400">Code Editor</span>
-                  <span className="text-xs text-purple-300/60">Python 3.11</span>
+                  <span className="text-sm font-semibold text-blue-400">Code Editor</span>
+                  <span className="text-xs text-gray-400">Python 3.11</span>
                 </div>
                 <div className="flex-1 overflow-hidden">
                   <MonacoEditor
@@ -236,7 +225,7 @@ sys.stdout = StringIO()
               {/* Output Panel */}
               <div className="glass rounded-2xl overflow-hidden flex flex-col">
                 <div className="px-4 py-2 border-b border-white/10">
-                  <span className="text-sm font-semibold text-purple-400">Output</span>
+                  <span className="text-sm font-semibold text-red-400">Output</span>
                 </div>
                 <div className="flex-1 overflow-auto p-4">
                   <pre className="font-mono text-sm text-green-300 whitespace-pre-wrap">

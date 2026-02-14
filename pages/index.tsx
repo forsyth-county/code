@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import GlassHeader from '@/components/GlassHeader';
 import GlowingButton from '@/components/GlowingButton';
-import { Code2, Sparkles } from 'lucide-react';
+import { Code2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function Home() {
@@ -70,49 +70,28 @@ export default function Home() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.6 }}
-                className="text-lg md:text-xl text-purple-200/80 max-w-3xl mx-auto leading-relaxed"
+                className="text-lg md:text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed"
               >
-                Turn practice time into mastery. Instant Python executor, dozens of challenges, 
-                plots, and tools — fast, safe, and actually fun.
+                Turn practice time into mastery. Instant Python executor with a beautiful interface — fast, safe, and actually fun.
               </motion.p>
 
-              {/* CTA Buttons */}
+              {/* CTA Button */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.8 }}
-                className="flex flex-col sm:flex-row gap-6 justify-center items-center pt-8"
+                className="flex justify-center items-center pt-8"
               >
                 <GlowingButton
                   onClick={() => router.push('/executor')}
                   icon={Code2}
                   variant="gradient"
                   size="lg"
-                  className="w-full sm:w-auto text-xl"
+                  className="text-xl bg-gradient-to-r from-blue-500 via-white to-red-500"
                 >
                   Start Coding Now
                 </GlowingButton>
-
-                <GlowingButton
-                  onClick={() => router.push('/executor?random=true')}
-                  icon={Sparkles}
-                  variant="purple"
-                  size="lg"
-                  className="w-full sm:w-auto text-xl bg-gradient-to-r from-purple-500 via-pink-500 to-red-500"
-                >
-                  Feeling Lucky?
-                </GlowingButton>
               </motion.div>
-
-              {/* Bottom Note */}
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 1 }}
-                className="text-sm text-purple-300/60 pt-4"
-              >
-                ✨ Feeling Lucky? takes you to a random coding challenge — perfect when you're bored!
-              </motion.p>
             </motion.div>
 
             {/* Features Section */}
@@ -129,14 +108,14 @@ export default function Home() {
                   emoji: "⚡"
                 },
                 {
-                  title: "Fun Challenges",
-                  description: "Practice with curated coding challenges from beginner to advanced.",
-                  emoji: "🎯"
-                },
-                {
-                  title: "Beautiful UI",
+                  title: "Beautiful Interface",
                   description: "Code in style with our stunning glassmorphic interface and smooth animations.",
                   emoji: "✨"
+                },
+                {
+                  title: "Error Handling",
+                  description: "Clear error messages and syntax checking to help you learn and debug faster.",
+                  emoji: "🛡️"
                 }
               ].map((feature, index) => (
                 <motion.div
@@ -148,7 +127,7 @@ export default function Home() {
                 >
                   <div className="text-5xl mb-4">{feature.emoji}</div>
                   <h3 className="text-xl font-bold mb-3 text-gradient">{feature.title}</h3>
-                  <p className="text-purple-200/70">{feature.description}</p>
+                  <p className="text-gray-300">{feature.description}</p>
                 </motion.div>
               ))}
             </motion.div>
