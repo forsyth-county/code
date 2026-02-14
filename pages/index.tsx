@@ -87,7 +87,7 @@ export default function Home() {
                   icon={Code2}
                   variant="gradient"
                   size="lg"
-                  className="text-xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white font-bold"
+                  className="text-xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white font-bold"
                 >
                   Start Coding Now
                 </GlowingButton>
