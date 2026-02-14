@@ -11,10 +11,18 @@ export default function Document() {
         <script
           dangerouslySetInnerHTML={{
             __html: `
-              if (typeof window !== 'undefined') {
-                window.define = undefined;
-                window.require = undefined;
-              }
+              // Permanently prevent AMD module loaders from being defined
+              // This prevents Pyodide from trying to use AMD loaders
+              Object.defineProperty(window, 'define', {
+                get: function() { return undefined; },
+                set: function() {},
+                configurable: false
+              });
+              Object.defineProperty(window, 'require', {
+                get: function() { return undefined; },
+                set: function() {},
+                configurable: false
+              });
             `,
           }}
         />
